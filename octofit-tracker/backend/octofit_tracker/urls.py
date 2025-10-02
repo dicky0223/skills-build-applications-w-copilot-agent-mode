@@ -14,6 +14,8 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 
+
+import os
 from django.contrib import admin
 from django.urls import path, include
 from rest_framework import routers
@@ -32,3 +34,23 @@ urlpatterns = [
     path('', views.api_root, name='api-root'),
     path('', include(router.urls)),
 ]
+
+# Patch api_root to return full URLs using $CODESPACE_NAME
+from rest_framework.response import Response
+from rest_framework.decorators import api_view
+
+@api_view(['GET'])
+def api_root(request, format=None):
+    codespace_name = os.environ.get('CODESPACE_NAME', 'localhost')
+    base_url = f"https://{codespace_name}-8000.app.github.dev/api"
+    return Response({
+        'users': f'{base_url}/users/',
+        'teams': f'{base_url}/teams/',
+        'activities': f'{base_url}/activities/',
+        'leaderboard': f'{base_url}/leaderboard/',
+        'workouts': f'{base_url}/workouts/',
+        'note': 'If you see HTTPS certificate issues, use the codespace URL or set up trusted certificates.'
+    })
+
+# Override the original api_root
+urlpatterns[1] = path('', api_root, name='api-root')
